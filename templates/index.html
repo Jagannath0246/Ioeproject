@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Tank Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .sensor-reading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .sensor-value {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .water-detected {
+            color: #28a745;
+        }
+
+        .no-water {
+            color: #dc3545;
+        }
+
+        .tank-visual {
+            width: 100px;
+            height: 200px;
+            border: 3px solid #333;
+            border-radius: 10px;
+            margin: 20px auto;
+            position: relative;
+            background: #e9ecef;
+            overflow: hidden;
+        }
+
+        .water-level {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: linear-gradient(to top, #007bff, #6eb8ff);
+            transition: height 0.5s ease;
+            border-radius: 0 0 7px 7px;
+        }
+
+        .controls {
+            text-align: center;
+        }
+
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+            transform: scale(1.05);
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        .status-running {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-stopped {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-auto {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-manual {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .chart-container {
+            height: 300px;
+            margin-top: 20px;
+        }
+
+        .last-updated {
+            color: #6c757d;
+            font-size: 0.9rem;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚰 Water Tank Management System</h1>
+            <p>IoT-based Automatic Water Level Controller</p>
+        </div>
+
+        <div class="dashboard">
+            <!-- Current Status Card -->
+            <div class="card">
+                <h3>📊 Current Status</h3>
+                <div class="sensor-reading">
+                    <span>Top Sensor:</span>
+                    <span id="topSensor" class="sensor-value">--</span>
+                </div>
+                <div class="sensor-reading">
+                    <span>Bottom Sensor:</span>
+                    <span id="bottomSensor" class="sensor-value">--</span>
+                </div>
+                <div class="sensor-reading">
+                    <span>Motor Status:</span>
+                    <span id="motorStatus" class="status">--</span>
+                </div>
+                <div class="sensor-reading">
+                    <span>Control Mode:</span>
+                    <span id="controlMode" class="status">--</span>
+                </div>
+                <div class="last-updated" id="lastUpdated">Last updated: --</div>
+            </div>
+
+            <!-- Tank Visualization Card -->
+            <div class="card">
+                <h3>🏺 Tank Visualization</h3>
+                <div class="tank-visual">
+                    <div class="water-level" id="waterLevel"></div>
+                </div>
+                <div style="text-align: center;">
+                    <div>Water Level: <span id="waterLevelText">0%</span></div>
+                </div>
+            </div>
+
+            <!-- Manual Controls Card -->
+            <div class="card">
+                <h3>🎮 Manual Controls</h3>
+                <div class="controls">
+                    <button class="btn btn-success" onclick="sendCommand('start')">
+                        ▶️ Start Motor
+                    </button>
+                    <button class="btn btn-danger" onclick="sendCommand('stop')">
+                        ⏹️ Stop Motor
+                    </button>
+                    <button class="btn" onclick="sendCommand('auto')">
+                        🤖 Auto Mode
+                    </button>
+                </div>
+                <div style="margin-top: 20px; text-align: center;">
+                    <div id="commandStatus" style="color: #28a745; font-weight: bold;"></div>
+                </div>
+            </div>
+
+            <!-- Historical Data Chart -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <h3>📈 Historical Data</h3>
+                <div class="chart-container">
+                    <canvas id="dataChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chart;
+        const WATER_THRESHOLD = 500;
+
+        // Initialize the chart
+        function initChart() {
+            const ctx = document.getElementById('dataChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Top Sensor',
+                        data: [],
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Bottom Sensor',
+                        data: [],
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Sensor Reading'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Fetch latest sensor data
+        async function fetchLatestData() {
+            try {
+                const response = await fetch('/api/latest-data');
+                if (response.ok) {
+                    const data = await response.json();
+                    updateDashboard(data);
+                }
+            } catch (error) {
+                console.error('Error fetching latest data:', error);
+            }
+        }
+
+        // Fetch historical data for chart
+        async function fetchHistoricalData() {
+            try {
+                const response = await fetch('/api/historical-data');
+                if (response.ok) {
+                    const data = await response.json();
+                    updateChart(data);
+                }
+            } catch (error) {
+                console.error('Error fetching historical data:', error);
+            }
+        }
+
+        // Update dashboard with latest data
+        function updateDashboard(data) {
+            document.getElementById('topSensor').textContent = data.top_sensor || '--';
+            document.getElementById('bottomSensor').textContent = data.bottom_sensor || '--';
+
+            // Update sensor status with water detection
+            const topElement = document.getElementById('topSensor');
+            const bottomElement = document.getElementById('bottomSensor');
+
+            if (data.top_sensor > WATER_THRESHOLD) {
+                topElement.className = 'sensor-value water-detected';
+                topElement.textContent += ' (Water Detected)';
+            } else {
+                topElement.className = 'sensor-value no-water';
+                topElement.textContent += ' (No Water)';
+            }
+
+            if (data.bottom_sensor > WATER_THRESHOLD) {
+                bottomElement.className = 'sensor-value water-detected';
+                bottomElement.textContent += ' (Water Detected)';
+            } else {
+                bottomElement.className = 'sensor-value no-water';
+                bottomElement.textContent += ' (No Water)';
+            }
+
+            // Update motor status
+            const motorStatusElement = document.getElementById('motorStatus');
+            if (data.motor_state) {
+                motorStatusElement.textContent = 'Running';
+                motorStatusElement.className = 'status status-running';
+            } else {
+                motorStatusElement.textContent = 'Stopped';
+                motorStatusElement.className = 'status status-stopped';
+            }
+
+            // Update control mode
+            const controlModeElement = document.getElementById('controlMode');
+            if (data.auto_mode) {
+                controlModeElement.textContent = 'Automatic';
+                controlModeElement.className = 'status status-auto';
+            } else {
+                controlModeElement.textContent = 'Manual';
+                controlModeElement.className = 'status status-manual';
+            }
+
+            // Update tank visualization
+            updateTankVisualization(data.top_sensor, data.bottom_sensor);
+
+            // Update last updated time
+            if (data.timestamp) {
+                const lastUpdated = new Date(data.timestamp).toLocaleString();
+                document.getElementById('lastUpdated').textContent = `Last updated: ${lastUpdated}`;
+            }
+        }
+
+        // Update tank visualization
+        function updateTankVisualization(topSensor, bottomSensor) {
+            const waterLevelElement = document.getElementById('waterLevel');
+            const waterLevelTextElement = document.getElementById('waterLevelText');
+
+            let waterPercentage = 0;
+
+            if (bottomSensor > WATER_THRESHOLD && topSensor > WATER_THRESHOLD) {
+                waterPercentage = 100; // Tank is full
+            } else if (bottomSensor > WATER_THRESHOLD) {
+                waterPercentage = 50; // Tank is half full
+            } else {
+                waterPercentage = 0; // Tank is empty
+            }
+
+            waterLevelElement.style.height = waterPercentage + '%';
+            waterLevelTextElement.textContent = waterPercentage + '%';
+        }
+
+        // Update chart with historical data
+        function updateChart(data) {
+            const labels = data.map(item => {
+                const date = new Date(item.timestamp);
+                return date.toLocaleTimeString();
+            });
+
+            const topSensorData = data.map(item => item.top_sensor);
+            const bottomSensorData = data.map(item => item.bottom_sensor);
+
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = topSensorData;
+            chart.data.datasets[1].data = bottomSensorData;
+            chart.update();
+        }
+
+        // Send motor control command
+        async function sendCommand(command) {
+            try {
+                const response = await fetch('/api/motor-control', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ command: command })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    document.getElementById('commandStatus').textContent = result.message;
+                    setTimeout(() => {
+                        document.getElementById('commandStatus').textContent = '';
+                    }, 3000);
+                } else {
+                    throw new Error('Failed to send command');
+                }
+            } catch (error) {
+                console.error('Error sending command:', error);
+                document.getElementById('commandStatus').textContent = 'Error sending command';
+                document.getElementById('commandStatus').style.color = '#dc3545';
+            }
+        }
+
+        // Initialize everything when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+            fetchLatestData();
+            fetchHistoricalData();
+
+            // Refresh data every 10 seconds
+            setInterval(() => {
+                fetchLatestData();
+                fetchHistoricalData();
+            }, 10000);
+        });
+    </script>
+</body>
+</html>
